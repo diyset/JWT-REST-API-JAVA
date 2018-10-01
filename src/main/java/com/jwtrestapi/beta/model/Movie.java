@@ -18,12 +18,17 @@ public class Movie extends DateAudit {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @NotBlank
+    @NotBlank(message = "FilmName is Not Null!")
     @Size(min = 6)
     private String filmName;
 
-    @NotNull
+    @NotNull(message = "ReleaseDate is Not Null!")
     private Date releaseDate;
+
+    private String imgBanner;
+
+    public Movie() {
+    }
 
     public Movie(String filmName, Date releaseDate) {
         this.filmName = filmName;

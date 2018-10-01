@@ -10,10 +10,10 @@ import java.util.Date;
 
 @Data
 public class MovieRequest {
-    @NotBlank
-    @Size(min = 6)
+    @NotBlank(message = "FilmName is Not Null!")
+    @Size(min = 6, max = 70)
     private String filmName;
-    @NotNull
+    @NotNull(message = "RelaseDate is Not Null!")
     private String releaseDate;
 
     public MovieRequest() {

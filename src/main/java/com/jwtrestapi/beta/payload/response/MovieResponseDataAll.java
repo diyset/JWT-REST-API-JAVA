@@ -7,15 +7,15 @@ import lombok.Setter;
 import java.util.List;
 @Getter
 @Setter
-public class MovieResponse {
+public class MovieResponseDataAll {
 
    private Boolean success;
    private List<MoviePayload> data;
 
-    public MovieResponse() {
+    public MovieResponseDataAll() {
     }
 
-    public MovieResponse(Boolean success, List<MoviePayload> data) {
+    public MovieResponseDataAll(Boolean success, List<MoviePayload> data) {
         this.success = success;
         this.data = data;
     }
