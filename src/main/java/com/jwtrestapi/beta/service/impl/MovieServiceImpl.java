@@ -4,6 +4,7 @@ import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.jwtrestapi.beta.exception.ResourceNotFoundException;
 import com.jwtrestapi.beta.model.Movie;
+import com.jwtrestapi.beta.payload.MoviePayload;
 import com.jwtrestapi.beta.payload.ResponseService;
 import com.jwtrestapi.beta.payload.request.MovieRequest;
 import com.jwtrestapi.beta.payload.response.MovieResponseInquiry;
@@ -20,6 +21,7 @@ import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 
 @Service("movieService")
 @Transactional
@@ -31,11 +33,33 @@ public class MovieServiceImpl implements MovieService {
     MovieRepository movieRepository;
 
     @Override
+    public MoviePayload getOneMovie(Long movieId) {
+        Movie movie = movieRepository.findById(movieId).orElseThrow(() -> {
+            LOGGER.error("Error : " + new ResourceNotFoundException("Movie", "movieId", movieId));
+            LOGGER.info("****END SERVICE");
+            return new ResourceNotFoundException("Movie", "movieId", movieId);
+        });
+        MoviePayload movieData = new MoviePayload();
+        movieData.setId(movie.getId());
+        movieData.setFilmName(movie.getFilmName());
+        movieData.setReleaseDate(simpleDateFormat.format(movie.getReleaseDate()));
+        movieData.setImgBanner(movie.getImgBanner()!=null?movie.getImgBanner():"");
+
+        return movieData;
+    }
+
+    @Override
     public List<Movie> getAllList() {
         LOGGER.info("****Start Service GetAllList");
-        List<Movie> movie = movieRepository.findAll();
-        LOGGER.info("****End Service");
-        return movie;
+        try {
+            List<Movie> movie = movieRepository.findAll();
+            LOGGER.info("****End Service");
+            return movie;
+        } catch (Exception e) {
+            LOGGER.error("Error : " + e.getLocalizedMessage());
+            LOGGER.info("****End Service");
+            return null;
+        }
     }
 
     @Override
@@ -132,7 +156,7 @@ public class MovieServiceImpl implements MovieService {
         try {
             movie.setId(movieId);
             movie.setReleaseDate(movieRequest.getReleaseDate() != null ? simpleDateFormat.parse(movieRequest.getReleaseDate()) : movie.getReleaseDate());
-            movie.setFilmName(movieRequest.getFilmName() != null ? movieRequest.getFilmName():movie.getFilmName());
+            movie.setFilmName(movieRequest.getFilmName() != null ? movieRequest.getFilmName() : movie.getFilmName());
         } catch (ParseException ex) {
             ex.printStackTrace();
         }

@@ -8,4 +8,5 @@ import org.springframework.stereotype.Repository;
 public interface CustomerProfileDetRepository extends JpaRepository<CustomerProfileDet, Long> {
 
     Boolean existsCustomerProfileDetByNoKtp(String noKtp);
+    Boolean existsCustomerProfileDetByNoHp(String noHp);
 }

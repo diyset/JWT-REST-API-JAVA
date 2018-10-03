@@ -41,6 +41,35 @@ public class MovieController {
     @Autowired
     private FileStorageService fileStorageService;
 
+    @GetMapping("/movies/{movieId}")
+    public ResponseEntity<?> getOneMovies(@PathVariable(value = "movieId") Long movieId) {
+        LOGGER.info("****Start Get One Movie");
+        try {
+            MoviePayload movie = movieService.getOneMovie(movieId);
+            LOGGER.info("****End Get One Movie");
+            return ResponseEntity.ok(new ResponseDataApi("success", true, movie));
+        } catch (Exception e) {
+            LOGGER.error(e.getLocalizedMessage());
+            LOGGER.error("****End Get One Movie");
+            return new ResponseEntity(new RestApiResponse(false, "Error " + e.getMessage(), "Error"), HttpStatus.NOT_FOUND);
+        }
+    }
+
+    @GetMapping("/movies")
+    public ResponseEntity<?> getAllMovieList() {
+        LOGGER.info("****Start Get All Movie List");
+        List<?> movie = movieService.getAllList();
+        if (movie.isEmpty()) {
+            LOGGER.error("Not Found Data");
+            LOGGER.info("****End Get All Movie List");
+            return new ResponseEntity(new ResponseDataApi("Data Not Found!", false, null), HttpStatus.NOT_FOUND);
+        }
+        ResponseDataApi response = new ResponseDataApi("success", true, movie);
+        LOGGER.info("****End Get All Movie List");
+
+        return ResponseEntity.ok(response);
+    }
+
     @PostMapping("/movieUpload/{movieId}")
     public ResponseEntity<?> uploadFileMovie(@PathVariable(value = "movieId") Long movieId, @RequestParam("file") MultipartFile multipartFile) {
 
@@ -127,7 +156,7 @@ public class MovieController {
     }
 
     @GetMapping("/movie/{movieId}")
-    public ResponseEntity<MovieResponseDataOne> getOneMovie(@PathVariable(value = "movieId") Long movieId) {
+    public ResponseEntity<?> getOneMovie(@PathVariable(value = "movieId") Long movieId) {
 
         return movieRepository.findById(movieId).map(movie -> {
             MoviePayload payload = new MoviePayload(movie.getId(), movie.getFilmName(), sdf.format(movie.getReleaseDate()),

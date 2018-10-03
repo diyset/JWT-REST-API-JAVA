@@ -1,8 +1,10 @@
 package com.jwtrestapi.beta.model;
 
 import com.fasterxml.jackson.annotation.JsonBackReference;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.jwtrestapi.beta.model.Enum.JenisKelaminEnum;
 import lombok.Data;
+import lombok.NoArgsConstructor;
 
 import javax.persistence.*;
 import javax.validation.constraints.NotBlank;
@@ -16,6 +18,7 @@ import java.util.Date;
 @Table(name = "customer_profile_det")
 public class CustomerProfileDet implements Serializable {
 
+    @JsonIgnore
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
@@ -54,6 +57,8 @@ public class CustomerProfileDet implements Serializable {
     private Customer customer;
 
 
+    public CustomerProfileDet() {
+    }
 
     public CustomerProfileDet(@NotBlank @Size(min = 5, max = 200) String alamat, @NotBlank String kota, @NotBlank String negara, Date tanggalLahir, @NotBlank JenisKelaminEnum jenisKelamin, @Size(min = 12, max = 20) String noHp, @Size(min = 6, max = 12) String kodePos, @Size(min = 16, max = 16) String noKtp, Customer customer) {
         this.alamat = alamat;
