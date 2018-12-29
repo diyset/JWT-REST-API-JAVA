@@ -11,6 +11,8 @@ public interface CustomerService {
 
     List<Customer> getAllList();
 
+    List<CustomerPayload> getAllListCustomer();
+
     CustomerPayload getOneCustomer(Long customerId);
 
     ResponseService createCustomer(CustomerRequest customerRequest);

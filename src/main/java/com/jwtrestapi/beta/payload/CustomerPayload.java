@@ -29,4 +29,15 @@ public class CustomerPayload implements Serializable {
 
     public CustomerPayload(CustomerPayload customerPayload) {
     }
+
+    @Override
+    public String toString() {
+        return "{" +
+                "customerId:" + customerId +
+                ", nama:'" + nama + '\'' +
+                ", email:'" + email + '\'' +
+                ", customerProfileDet:" + customerProfileDet +
+                '}';
+    }
+
 }

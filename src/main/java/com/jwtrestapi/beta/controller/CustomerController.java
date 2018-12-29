@@ -1,9 +1,6 @@
 package com.jwtrestapi.beta.controller;
 
-import com.jwtrestapi.beta.exception.ResourceNotFoundException;
 import com.jwtrestapi.beta.model.Customer;
-import com.jwtrestapi.beta.model.CustomerProfileDet;
-import com.jwtrestapi.beta.model.Enum.JenisKelaminEnum;
 import com.jwtrestapi.beta.payload.CustomerPayload;
 import com.jwtrestapi.beta.payload.ResponseService;
 import com.jwtrestapi.beta.payload.request.CustomerRequest;
@@ -11,6 +8,7 @@ import com.jwtrestapi.beta.payload.response.*;
 import com.jwtrestapi.beta.repository.CustomerProfileDetRepository;
 import com.jwtrestapi.beta.repository.CustomerRepository;
 import com.jwtrestapi.beta.service.CustomerService;
+import com.jwtrestapi.beta.util.Constant;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -18,29 +16,18 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import javax.validation.Valid;
-import java.text.ParseException;
-import java.text.SimpleDateFormat;
-import java.util.Date;
 import java.util.List;
 
 @RequestMapping("/api/customer")
 @RestController
 public class CustomerController {
-
     private static final Logger LOGGER = LoggerFactory.getLogger(CustomerController.class);
-
-    SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
-    @Autowired
-    CustomerRepository customerRepository;
 
     @Autowired
     CustomerService customerService;
 
-    @Autowired
-    CustomerProfileDetRepository customerProfileDetRepository;
-
-
+    /*
+    Yang Lama Create Customer
     @PostMapping("/create")
     public ResponseEntity<?> createCustomerAndDetProfile(@Valid @RequestBody CustomerRequest customerRequest) throws ParseException {
 
@@ -52,10 +39,12 @@ public class CustomerController {
             return new ResponseEntity(new ApiResponse(false, "No Ktp is Existing!"), HttpStatus.BAD_REQUEST);
         }
         JenisKelaminEnum gender;
-        if (customerRequest.getJenisKelamin().equalsIgnoreCase("L")) {
+        if (customerRequest.getJenisKelamin().equalsIgnoreCase(Constant.GENDER.LAKI_LAKI.getCode())) {
             gender = JenisKelaminEnum.LAKI_LAKI;
-        } else {
+        } else if (customerRequest.getJenisKelamin().equalsIgnoreCase(Constant.GENDER.WANITA.getCode())) {
             gender = JenisKelaminEnum.PEREMPUAN;
+        } else {
+            gender = null;
         }
 
         Customer customer = new Customer();
@@ -65,156 +54,128 @@ public class CustomerController {
         CustomerProfileDet customerProfileDet = new CustomerProfileDet(customerRequest.getAlamat(),
                 customerRequest.getKota(), customerRequest.getNegara(), sdf.parse(customerRequest.getTanggalLahir()),
                 gender, customerRequest.getNoHp(), customerRequest.getKodePos(), customerRequest.getNoKtp(), customer);
-
         customer.setCustomerProfileDet(customerProfileDet);
         customerProfileDet.setCustomer(customer);
-
-
         customerRepository.save(customer);
+
         return ResponseEntity.ok(new ApiResponse(true, "successfully created Customer!"));
-
     }
+    */
 
-    @GetMapping("/customerss/{customerId}")
-    public ResponseEntity<?> getOneCustomerResponse(@PathVariable(value = "customerId") Long customerId) {
-        LOGGER.info("****Start GetOneCustomerController");
+    @GetMapping("/getOne/{customerId}")
+    public ResponseEntity<?> getOneCustomerResponse(@PathVariable(value = "customerId") Long customerId, @RequestHeader("Authorization") String token) {
+        Class nameMethodClass = new Object() {}.getClass();
+        LOGGER.info(Constant.INFO_SERVICE.START_CONTROLLER.getDescription(nameMethodClass));
+        LOGGER.info("Token : {}", token);
         try {
-            CustomerPayload customerPayload = customerService.getOneCustomer(customerId);
-            return ResponseEntity.ok(new ResponseDataApi("success", true, customerPayload));
+            CustomerPayload responseService = customerService.getOneCustomer(customerId);
+            if(responseService.getCustomerId()!=null){
+                LOGGER.info("Data : {}", responseService);
+                LOGGER.info(Constant.INFO_SERVICE.END_CONTROLLER.getDescription(nameMethodClass));
+                return ResponseEntity.ok(new ResponseDataApi(Constant.RESPONSE_SERVICE.SUCCESS.getDescription(), true, responseService));
+            } else {
+                LOGGER.info("Data : {}",Constant.RESPONSE_SERVICE.DATA_NOT_FOUND.getDescription());
+                LOGGER.info(Constant.INFO_SERVICE.END_CONTROLLER.getDescription(nameMethodClass));
+                return new ResponseEntity(new ResponseDataApi(Constant.RESPONSE_SERVICE.DATA_NOT_FOUND.getDescription(),false,null),HttpStatus.NOT_FOUND);
+            }
+//            return new ResponseEntity(new ResponseDataApi("success", true, responseService), HttpStatus.ACCEPTED);
         } catch (Exception e) {
-            LOGGER.error(e.getLocalizedMessage());
-            LOGGER.info("***End GetOneCustomerController");
+            e.printStackTrace();
+            LOGGER.error(e.getMessage());
+            LOGGER.info(Constant.INFO_SERVICE.END_CONTROLLER.getDescription(nameMethodClass));
             return new ResponseEntity(new ResponseDataApi(e.getMessage(), false, null), HttpStatus.NOT_FOUND);
         }
     }
 
     @PostMapping("/createResponse")
-    public ResponseEntity<?> createCustomerResponse(@RequestBody CustomerRequest customerRequest) {
-        LOGGER.info("****Start CreateCustomerController");
+    public ResponseEntity<?> createCustomerAndDet(@RequestBody CustomerRequest customerRequest, @RequestHeader("Authorization") String token) {
+        Class classNameMethod = new Object(){}.getClass();
+        LOGGER.info(Constant.INFO_SERVICE.START_CONTROLLER.getDescription(classNameMethod));
+        LOGGER.info("Token : {}", token);
         try {
             ResponseService responseService = customerService.createCustomer(customerRequest);
             if (responseService.getSuccess()) {
-                return ResponseEntity.ok(new ResponseDataApi(responseService.getData(), true, customerRequest));
-
+                LOGGER.info("Data : {}", customerRequest);
+                LOGGER.info(Constant.INFO_SERVICE.END_CONTROLLER.getDescription(classNameMethod));
+                return ResponseEntity.ok(new ResponseDataApi(Constant.RESPONSE_SERVICE.SUCCESS.getDescription(), true, customerRequest));
             }
-            return new ResponseEntity(new ResponseDataApi(responseService.getData(), false, null), HttpStatus.BAD_REQUEST);
+            LOGGER.info("Data : {}", responseService);
+            LOGGER.info(Constant.INFO_SERVICE.END_CONTROLLER.getDescription(classNameMethod));
+            return new ResponseEntity(new ResponseDataApi(responseService.getData(), false, customerRequest), HttpStatus.BAD_REQUEST);
         } catch (Exception e) {
-            LOGGER.error(e.getLocalizedMessage());
-            LOGGER.info("****End CreateCustomerController");
-            return new ResponseEntity(new ResponseDataApi(e.getLocalizedMessage(), false, "error"), HttpStatus.BAD_REQUEST);
+            e.printStackTrace();
+            LOGGER.error("Error : {}",e.getMessage());
+            LOGGER.info(Constant.INFO_SERVICE.END_CONTROLLER.getDescription(classNameMethod));
+            return new ResponseEntity(new ResponseDataApi(e.getLocalizedMessage(), false, e.getMessage()), HttpStatus.BAD_REQUEST);
         }
     }
 
-    @GetMapping("/customerss")
-    public ResponseEntity<?> getAllCustomerResponse() {
-        LOGGER.info("****Start Get All Customer");
+    @GetMapping("/all")
+    public ResponseEntity<?> getAllCustomer(@RequestHeader("Authorization") String token) {
+        Class classNameMethod = new Object() {}.getClass();
+        LOGGER.info(Constant.INFO_SERVICE.START_CONTROLLER.getDescription(classNameMethod));
+        LOGGER.info("Token : {}", token);
         try {
-            List<Customer> customers = customerService.getAllList();
+            List<CustomerPayload> customers = customerService.getAllListCustomer();
             if (customers.size() == 0) {
-                LOGGER.error("Data Not Found : " + customers.size());
-                LOGGER.info("****End Get All Customer");
-                return new ResponseEntity(new ResponseDataApi("Data Not Found", false, null), HttpStatus.NOT_FOUND);
+                LOGGER.error("Data Not Found : {}", customers.size());
+                LOGGER.info(Constant.INFO_SERVICE.END_CONTROLLER.getDescription(classNameMethod));
+                return new ResponseEntity(new ResponseDataApi(Constant.RESPONSE_SERVICE.DATA_NOT_FOUND.getDescription(), false, null), HttpStatus.NOT_FOUND);
             }
-            LOGGER.info("****End Get All Customer");
-            return ResponseEntity.ok(new ResponseDataApi("success", true, customers));
-
+            LOGGER.info("Quantity Data : {}",customers.size());
+            LOGGER.info("Data : {}", new ResponseDataApi(Constant.RESPONSE_SERVICE.SUCCESS.getDescription(),false,customers.size()+" unit"));
+            LOGGER.info(Constant.INFO_SERVICE.END_CONTROLLER.getDescription(classNameMethod));
+            return ResponseEntity.ok(new ResponseDataApi(Constant.RESPONSE_SERVICE.SUCCESS.getDescription(), true, customers));
         } catch (Exception e) {
-            LOGGER.error(e.getLocalizedMessage());
-            LOGGER.info("****End Get All Customer");
+            e.printStackTrace();
+            LOGGER.error(e.getMessage());
+            LOGGER.info(Constant.RESPONSE_SERVICE.ERROR.getDescription());
             return new ResponseEntity(new ResponseDataApi(e.getLocalizedMessage(), false, null), HttpStatus.BAD_REQUEST);
         }
 
     }
 
-    @GetMapping("/allRetriveOld")
-    public List<Customer> getAllCustomerRetrive() {
-        List<Customer> customers = customerRepository.findAll();
-        return customers;
-    }
-
-    @GetMapping("/allRetrive")
-    public ResponseEntity<CustomerResponseAllRetrive> getAllCustomerResponseRetrive() {
-        List<Customer> customers = customerRepository.findAll();
-        if (customers == null) {
-            return new ResponseEntity(new ApiResponse(false, "Data Not Found"), HttpStatus.BAD_REQUEST);
-        }
-        return ResponseEntity.ok(new CustomerResponseAllRetrive(true, customers));
-    }
-
-    @GetMapping("/{customerId}")
-    public ResponseEntity<CustomerResponseDataOne> getOneCustomer(@PathVariable(value = "customerId") Long customerId) {
-        return customerRepository.findById(customerId).map(customer -> {
-            return ResponseEntity.ok(new CustomerResponseDataOne(true, customer));
-        }).orElseThrow(() -> new ResourceNotFoundException("Customer", "customerId", customerId));
-    }
-
-    @GetMapping("/demo/{customerId}")
-    public ResponseEntity<CustomerResponseDataOneWithPayload> getOneCustomerWithPayload(@PathVariable(value = "customerId") Long customerId) {
-
-        return customerRepository.findById(customerId).map(customer -> {
-            CustomerPayload customerPayload = new CustomerPayload(customer.getId(), customer.getNama(),
-                    customer.getEmail(), customer.getCustomerProfileDet());
-            return ResponseEntity.ok(new CustomerResponseDataOneWithPayload(true, customerPayload));
-        }).orElseThrow(() -> new ResourceNotFoundException("Customer", "customerId", customerId));
-    }
-
     @PostMapping("/delete/{customerId}")
     public ResponseEntity<?> deleteCustomer(@PathVariable(value = "customerId") Long customerId) {
-        LOGGER.info("****Start Delete Customer Id " + customerId);
+        Class classNameMethod = new Object() {}.getClass();
+        LOGGER.info(Constant.INFO_SERVICE.START_CONTROLLER.getDescription(classNameMethod));
+        LOGGER.info("Customer Id : `{}`", customerId);
         try {
             ResponseService responseService = customerService.deleteCustomer(customerId);
             if (responseService.getSuccess()) {
-                LOGGER.info("***End Delete Customer Controller");
+                LOGGER.info(Constant.INFO_SERVICE.END_CONTROLLER.getDescription(classNameMethod));
                 return ResponseEntity.ok(new ResponseDataApi(responseService.getData(), true, "success"));
             }
-            LOGGER.info("***End Delete Customer Controller");
-            return new ResponseEntity(new ResponseDataApi("Data Not Found!", false, null), HttpStatus.NOT_FOUND);
+            LOGGER.info(Constant.INFO_SERVICE.END_CONTROLLER.getDescription(classNameMethod));
+            return new ResponseEntity(new ResponseDataApi(Constant.RESPONSE_SERVICE.DATA_NOT_FOUND.getDescription(), false, null), HttpStatus.NOT_FOUND);
         } catch (Exception e) {
-            LOGGER.error(e.getLocalizedMessage());
-            LOGGER.info("***End Delete Customer Controller");
-            return new ResponseEntity(new ResponseDataApi("Error", false, e.getLocalizedMessage()), HttpStatus.BAD_REQUEST);
+            e.printStackTrace();
+            LOGGER.error(e.getMessage());
+            LOGGER.info(Constant.INFO_SERVICE.END_CONTROLLER.getDescription(classNameMethod));
+            return new ResponseEntity(new ResponseDataApi(Constant.RESPONSE_SERVICE.ERROR.getDescription(), false, e.getMessage()), HttpStatus.BAD_REQUEST);
         }
     }
 
-    @PutMapping("/update/{customerId}")
+    @PostMapping("/update/{customerId}")
     public ResponseEntity<?> updateCustomer(@PathVariable(value = "customerId") Long customerId,
                                             @RequestBody CustomerRequest customerRequest) {
-
-        if (customerRequest.getNama() == null || customerRequest.getEmail() == null) {
-            return new ResponseEntity(new ApiResponse(false, "Payload Validasi Fail!"), HttpStatus.BAD_REQUEST);
+        Class classNameMethod = new Object(){}.getClass();
+        LOGGER.info(Constant.INFO_SERVICE.START_CONTROLLER.getDescription(classNameMethod));
+        try {
+            ResponseService responseService = customerService.updateCustomer(customerId, customerRequest);
+            if (!responseService.getSuccess()) {
+                LOGGER.info("Error : {}", responseService.getData());
+                LOGGER.info(Constant.INFO_SERVICE.END_CONTROLLER.getDescription(classNameMethod));
+                return new ResponseEntity(new ResponseDataApi(responseService.getData(), false, null), HttpStatus.BAD_REQUEST);
+            }
+            LOGGER.info("Data : {}", customerRequest);
+            LOGGER.info(Constant.INFO_SERVICE.END_CONTROLLER.getDescription(classNameMethod));
+            return ResponseEntity.ok(new ResponseDataApi("success", true, responseService.getData()));
+        } catch (Exception e) {
+            e.printStackTrace();
+            LOGGER.error(Constant.RESPONSE_SERVICE.ERROR.getDescription()+"{}",e.getMessage());
+            LOGGER.info(Constant.INFO_SERVICE.END_CONTROLLER.getDescription(classNameMethod));
+            return new ResponseEntity(new ResponseDataApi(e.getLocalizedMessage(), false, e.getMessage()), HttpStatus.BAD_REQUEST);
         }
-
-        return customerRepository.findById(customerId).map(customer -> {
-            CustomerProfileDet customerProfileDet = customer.getCustomerProfileDet();
-            JenisKelaminEnum gender;
-            String tempJenisKelaminRequest = customerRequest.getJenisKelamin() != null ? customerRequest.getJenisKelamin() : customerProfileDet.getJenisKelamin().toString();
-            if (tempJenisKelaminRequest.equalsIgnoreCase("L") || tempJenisKelaminRequest.equals(JenisKelaminEnum.LAKI_LAKI)) {
-                gender = JenisKelaminEnum.LAKI_LAKI;
-            } else {
-                gender = JenisKelaminEnum.PEREMPUAN;
-            }
-            customer.setId(customer.getId());
-            customer.setNama(customerRequest.getNama());
-            customer.setEmail(customerRequest.getEmail());
-
-            Date tempDate = null;
-            try {
-                tempDate = customerRequest.getTanggalLahir() != null ? sdf.parse(customerRequest.getTanggalLahir()) : customerProfileDet.getTanggalLahir();
-            } catch (ParseException e) {
-                e.printStackTrace();
-            }
-            customerProfileDet.setKota(customerRequest.getKota() != null ? customerRequest.getKota() : customerProfileDet.getKota());
-            customerProfileDet.setTanggalLahir(tempDate);
-            customerProfileDet.setNegara(customerRequest.getNegara() != null ? customerRequest.getNegara() : customerProfileDet.getNegara());
-            customerProfileDet.setJenisKelamin(gender);
-            customerProfileDet.setNoKtp(customerRequest.getNoKtp() != null ? customerRequest.getNoKtp() : customerProfileDet.getNoKtp());
-            customerProfileDet.setCustomer(customer);
-
-            customerRepository.save(customer);
-            return ResponseEntity.ok(new ApiResponse(true, "Success update Customer!"));
-
-        }).orElseThrow(() -> new ResourceNotFoundException("Customer", "customerId", customerId));
     }
-
-
 }

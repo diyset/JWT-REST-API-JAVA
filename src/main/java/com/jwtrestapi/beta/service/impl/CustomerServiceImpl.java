@@ -11,6 +11,7 @@ import com.jwtrestapi.beta.payload.request.CustomerRequest;
 import com.jwtrestapi.beta.repository.CustomerProfileDetRepository;
 import com.jwtrestapi.beta.repository.CustomerRepository;
 import com.jwtrestapi.beta.service.CustomerService;
+import com.jwtrestapi.beta.util.Constant;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -18,17 +19,15 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.text.ParseException;
-import java.text.SimpleDateFormat;
+import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
 
 @Service("customerService")
 @Transactional
 public class CustomerServiceImpl implements CustomerService {
-
-    SimpleDateFormat sdf = new SimpleDateFormat("dd-MM-yyyy");
-
+    private Class classNameMethod = new Object(){}.getClass();
     private static final Logger LOGGER = LoggerFactory.getLogger(CustomerServiceImpl.class);
-    Gson gson = new Gson();
     @Autowired
     CustomerRepository customerRepository;
 
@@ -44,50 +43,93 @@ public class CustomerServiceImpl implements CustomerService {
     }
 
     @Override
+    public List<CustomerPayload> getAllListCustomer() {
+        Class nameMethod = new Object(){}.getClass();
+        LOGGER.info(Constant.INFO_SERVICE.START_SERVICE.getDescription(nameMethod));
+        List<Customer> customers = customerRepository.findAll();
+        LOGGER.info("Data : {}",customers);
+        List<CustomerPayload> customerPayloads = new ArrayList<>();
+        for (Customer customer:customers) {
+            customerPayloads.add(new CustomerPayload(customer.getId(),customer.getNama(),customer.getEmail(),customer.getCustomerProfileDet()));
+        }
+        LOGGER.info(Constant.INFO_SERVICE.END_SERVICE.getDescription(nameMethod));
+        return customerPayloads;
+    }
+
+    @Override
     public CustomerPayload getOneCustomer(Long customerId) {
-        LOGGER.info("****Start Service GetOneCustomer : " + customerId);
+        Class nameMethod = new Object(){}.getClass();
+        LOGGER.info(Constant.INFO_SERVICE.START_SERVICE.getDescription(nameMethod));
+        LOGGER.info("Customer Id : `{}`",customerId);
+        /*
+        Yang lama belom dipake lagi
+
         Customer customer = customerRepository.findById(customerId).orElseThrow(() -> {
-            LOGGER.error("Error : " + new ResourceNotFoundException("Customer", "customer", customerId));
-            LOGGER.info("****End Service GetOneCustomer");
-            return new ResourceNotFoundException("Customer", "customer", customerId);
+            LOGGER.error("Error : {}", new ResourceNotFoundException("Customer", "customerId", customerId));
+            LOGGER.info(Constant.INFO_SERVICE.END_SERVICE.getDescription(nameMethod));
+            return new ResourceNotFoundException("Customer", "customerId", customerId);
         });
+          */
+        Customer customer = customerRepository.findById(customerId).orElse(new Customer());
+        if(null==customer){
+            LOGGER.error("Error : {}", new ResourceNotFoundException("Customer", "customerId", customerId));
+            LOGGER.info(Constant.INFO_SERVICE.END_SERVICE.getDescription(nameMethod));
+            return new CustomerPayload();
+        }
         CustomerPayload customerPayload = new CustomerPayload();
         customerPayload.setNama(customer.getNama());
         customerPayload.setEmail(customer.getEmail());
         customerPayload.setCustomerProfileDet(customer.getCustomerProfileDet());
         customerPayload.setCustomerId(customer.getId());
-        LOGGER.info("****End Service GetOneCustomer");
+
+        LOGGER.info(Constant.INFO_SERVICE.END_SERVICE.getDescription(nameMethod));
         return customerPayload;
     }
 
     @Override
     public ResponseService createCustomer(CustomerRequest customerRequest) {
-        LOGGER.info("****Start Service CreateCustomer");
+        Class className = new Object(){}.getClass();
+        LOGGER.info(Constant.INFO_SERVICE.START_SERVICE.getDescription(className));
         JenisKelaminEnum gender;
         Customer customer = new Customer();
         CustomerProfileDet customerProfileDet = new CustomerProfileDet();
 
-
+//        if (!datePattern.matches(customerRequest.getTanggalLahir())) {
+        /*
+         * Validasi Create Customer Service
+         * ---------------------------------
+         */
+        if (!Constant.isDatePattern(customerRequest.getTanggalLahir())) {
+            LOGGER.error(Constant.MESSAGE_VALIDATE.DATE_FORMAT.getDescription(customerRequest.getTanggalLahir()));
+            LOGGER.info(Constant.INFO_SERVICE.END_SERVICE.getDescription(className));
+            return new ResponseService(false, Constant.MESSAGE_VALIDATE.DATE_FORMAT.getDescription(customerRequest.getTanggalLahir()));
+        }
         if (customerRepository.existsCustomerByEmail(customerRequest.getEmail())) {
-            LOGGER.info("Existing Customer By Email");
-            LOGGER.info("****End Service CreateCustomer");
+            LOGGER.error("Existing Customer By Email");
+            LOGGER.info(Constant.INFO_SERVICE.END_SERVICE.getDescription(className));
             return new ResponseService(false, "Exist Email Customer!");
         }
         if (customerProfileDetRepository.existsCustomerProfileDetByNoHp(customerRequest.getNoHp())) {
-            LOGGER.info("Existing Customer By No Hp");
-            LOGGER.info("****End Service CreateCustomer");
+            LOGGER.error("Existing Customer By No Hp");
+            LOGGER.info(Constant.INFO_SERVICE.END_SERVICE.getDescription(className));
             return new ResponseService(false, "Exist No Hp Customer!");
         }
         if (customerProfileDetRepository.existsCustomerProfileDetByNoKtp(customerRequest.getNoKtp())) {
-            LOGGER.info("Existing Customer By No Ktp");
-            LOGGER.info("****End Service CreateCustomer");
+            LOGGER.error("Existing Customer By No Ktp");
+            LOGGER.info(Constant.INFO_SERVICE.END_SERVICE.getDescription(className));
             return new ResponseService(false, "Exist No Ktp Customer!");
         }
+        /*
+            ------------------------
+         */
 
+        /*
+        Persist DB
+         */
         customer.setEmail(customerRequest.getEmail());
         customer.setNama(customerRequest.getNama());
         customerProfileDet.setNoKtp(customerRequest.getNoKtp());
-        if (customerRequest.getJenisKelamin().equalsIgnoreCase("L")) {
+        if (customerRequest.getJenisKelamin().equalsIgnoreCase(Constant.GENDER.LAKI_LAKI.getCode())) {
             gender = JenisKelaminEnum.LAKI_LAKI;
         } else {
             gender = JenisKelaminEnum.PEREMPUAN;
@@ -95,39 +137,77 @@ public class CustomerServiceImpl implements CustomerService {
         customerProfileDet.setJenisKelamin(gender);
         customerProfileDet.setNegara(customerRequest.getNegara());
         try {
-            customerProfileDet.setTanggalLahir(sdf.parse(customerRequest.getTanggalLahir()));
+            customerProfileDet.setTanggalLahir(Constant.dateFormat.parse(customerRequest.getTanggalLahir()));
         } catch (ParseException e) {
-            LOGGER.error(e.getLocalizedMessage());
+            e.printStackTrace();
+            LOGGER.error(e.getMessage());
+            LOGGER.info(Constant.INFO_SERVICE.END_SERVICE.getDescription(className));
+            return new ResponseService(false,e.getMessage());
         }
         customerProfileDet.setNoHp(customerRequest.getNoHp());
         customerProfileDet.setKota(customerRequest.getKota());
         customerProfileDet.setKodePos(customerRequest.getKodePos());
         customerProfileDet.setAlamat(customerRequest.getAlamat());
-        customer.setCustomerProfileDet(customerProfileDet);
         customerProfileDet.setCustomer(customer);
+        customer.setCustomerProfileDet(customerProfileDet);
         customerRepository.save(customer);
-        LOGGER.info("Data Request : " + gson.toJson(customerRequest));
-        LOGGER.info("****End Service Create Customer");
-        return new ResponseService(true, "Successfully Create Customer!");
+//        customerProfileDetRepository.save(customerProfileDet);
+        LOGGER.info("Data Request : " + customerRequest);
+        LOGGER.info(Constant.INFO_SERVICE.END_SERVICE.getDescription(className));
+        return new ResponseService(true, customerRequest.toString());
     }
 
     @Override
     public ResponseService deleteCustomer(Long customerId) {
-        LOGGER.info("****Start Service Delete Customer");
+        LOGGER.info(Constant.INFO_SERVICE.START_SERVICE.getDescription(this.getClass()));
         Customer customer = customerRepository.findById(customerId).orElseThrow(() -> {
-            LOGGER.error("Error : " + new ResourceNotFoundException("Customer", "customerId", customerId));
-            LOGGER.info("****End Service Delete Customer");
+            LOGGER.error("Error : {}", new ResourceNotFoundException("Customer", "customerId", customerId));
+            LOGGER.info(Constant.INFO_SERVICE.END_SERVICE.getDescription(this.getClass()));
             return new ResourceNotFoundException("Customer", "customerId", customerId);
         });
         customerRepository.delete(customer);
-        LOGGER.info("****End Service Delete Customer Id : " + customerId);
-        return new ResponseService(true, "Successfully Deleted Id " + customerId + " (" + customer.getNama() + ")");
+        LOGGER.info(Constant.INFO_SERVICE.END_SERVICE.getDescription(this.getClass()));
+        return new ResponseService(true, customer.toString());
     }
 
     @Override
     public ResponseService updateCustomer(Long customerId, CustomerRequest customerRequest) {
-        return null;
+        LOGGER.info(Constant.INFO_SERVICE.START_SERVICE.getDescription(classNameMethod));
+        Customer customer = customerRepository.findById(customerId).orElseThrow(() -> {
+            LOGGER.error("Error : {}", new ResourceNotFoundException("Customer", "customerId", customerId));
+            LOGGER.info(Constant.INFO_SERVICE.END_SERVICE.getDescription(classNameMethod));
+            return new ResourceNotFoundException("Customer", "customerId", customerId);
+        });
+        if (!Constant.isDatePattern(customerRequest.getTanggalLahir())) {
+            return new ResponseService(false, "Invalid Date Format (dd-MM-yyyy)" + customerRequest.getTanggalLahir());
+        }
+        CustomerProfileDet customerProfileDet = customer.getCustomerProfileDet();
+        String temptJenisKelaminRequest = customerRequest.getJenisKelamin() != null ? customerRequest.getJenisKelamin()
+                : customerProfileDet.getJenisKelamin().toString();
+        if (temptJenisKelaminRequest.equalsIgnoreCase("L") || temptJenisKelaminRequest.equals(JenisKelaminEnum.LAKI_LAKI)) {
+            customerProfileDet.setJenisKelamin(JenisKelaminEnum.LAKI_LAKI);
+        } else {
+            customerProfileDet.setJenisKelamin(JenisKelaminEnum.PEREMPUAN);
+        }
+        customerProfileDet.setAlamat(customerRequest.getAlamat() != null ? customerRequest.getAlamat() : customer.getCustomerProfileDet().getAlamat());
+        customer.setNama(customerRequest.getNama());
+        customer.setEmail(customerRequest.getEmail());
+        customerProfileDet.setKodePos(customerRequest.getKota() != null ? customerRequest.getKota() : customer.getCustomerProfileDet().getKota());
+        customerProfileDet.setNegara(customerRequest.getNegara() != null ? customerRequest.getNegara() : customer.getCustomerProfileDet().getNegara());
+        customerProfileDet.setNoKtp(customerRequest.getNoKtp() != null ? customerRequest.getNoKtp() : customer.getCustomerProfileDet().getNoKtp());
+        Date tempDate;
+        try {
+            tempDate = customerRequest.getTanggalLahir() != null ? Constant.dateFormat.parse(customerRequest.getTanggalLahir()) : customerProfileDet.getTanggalLahir();
+            customerProfileDet.setTanggalLahir(tempDate);
+        } catch (ParseException e) {
+            e.printStackTrace();
+            LOGGER.info("Error : {}",e.getMessage());
+            LOGGER.info(Constant.INFO_SERVICE.END_SERVICE.getDescription(classNameMethod));
+        }
+        customerProfileDet.setCustomer(customer);
+        customerRepository.save(customer);
+        LOGGER.info(Constant.INFO_SERVICE.END_SERVICE.getDescription(classNameMethod));
+        return new ResponseService(true, customer.toString());
     }
-
 
 }
